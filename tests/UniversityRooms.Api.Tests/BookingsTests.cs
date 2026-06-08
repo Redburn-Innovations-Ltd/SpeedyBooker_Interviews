@@ -137,4 +137,20 @@ public class BookingsTests(ApiFixture fixture)
         var response = await _client.PostAsync("/api/bookings/99999/cancel", null);
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
+
+    [Fact]
+    public async Task Cancel_well_before_checkin_records_a_full_refund()
+    {
+        var checkIn = DateOnly.FromDateTime(DateTime.UtcNow.Date).AddDays(30);
+        var created = await (await _client.PostAsJsonAsync("/api/bookings",
+            NewRequest(7, "refund-full@example.com", checkIn, nights: 2))).ReadAsync<BookingResponse>();
+
+        var cancel = await _client.PostAsync($"/api/bookings/{created.Id}/cancel", null);
+        Assert.Equal(HttpStatusCode.NoContent, cancel.StatusCode);
+
+        var payments = await (await _client.GetAsync($"/api/payments?bookingId={created.Id}"))
+            .ReadAsync<List<PaymentResponse>>();
+        var refund = Assert.Single(payments, p => p.Status == "Refunded");
+        Assert.Equal(-created.TotalPrice, refund.Amount);
+    }
 }
