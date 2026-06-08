@@ -1,0 +1,24 @@
+# Build output
+bin/
+obj/
+out/
+
+# Coverage artifacts
+coverage*.xml
+coverage*.json
+TestResults/
+
+# Reqnroll-generated code-behind (regenerated from .feature files on build)
+*.feature.cs
+
+# Rider / VS / VS Code
+.idea/
+.vs/
+*.user
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local-only interviewer material — must never be committed
+INTERVIEWER_NOTES.md
