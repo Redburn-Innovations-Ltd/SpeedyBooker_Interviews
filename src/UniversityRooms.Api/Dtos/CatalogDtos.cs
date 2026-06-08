@@ -15,6 +15,8 @@ public record RoomResponse(
         new(r.Id, r.VendorId, r.Vendor?.Name ?? "", r.Name, r.Building, r.Capacity, r.NightlyRate);
 }
 
+public record PagedRooms(int Page, int PageSize, IReadOnlyList<RoomResponse> Items);
+
 public record PaymentResponse(
     int Id, int BookingId, decimal Amount, string Status, string Method, DateTime CreatedAtUtc)
 {

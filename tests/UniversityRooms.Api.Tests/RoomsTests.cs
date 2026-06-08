@@ -109,4 +109,23 @@ public class RoomsTests(ApiFixture fixture)
         var response = await _client.GetAsync("/api/rooms/availability?startDate=2030-01-01&nights=0");
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
+
+    [Fact]
+    public async Task Search_returns_available_rooms_matching_filters()
+    {
+        var result = await (await _client.GetAsync(
+            "/api/rooms/search?startDate=2031-01-01&nights=2&minCapacity=2&page=1&pageSize=50"))
+            .ReadAsync<PagedRooms>();
+
+        Assert.Equal(1, result.Page);
+        Assert.NotEmpty(result.Items);
+        Assert.All(result.Items, r => Assert.True(r.Capacity >= 2));
+    }
+
+    [Fact]
+    public async Task Search_with_zero_nights_returns_400()
+    {
+        var response = await _client.GetAsync("/api/rooms/search?startDate=2031-01-01&nights=0");
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
 }
