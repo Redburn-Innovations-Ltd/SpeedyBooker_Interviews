@@ -2,7 +2,10 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using UniversityRooms.Api.Services;
 
 namespace UniversityRooms.Api.Tests;
 
@@ -17,10 +20,19 @@ public class ApiFixture : WebApplicationFactory<Program>
 
     public static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
+    /// <summary>Captures emails the app sends during a test run.</summary>
+    public TestEmailSender Email { get; } = new();
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         // Keep test output readable — silence the framework/EF Core log spam.
         builder.ConfigureLogging(logging => logging.ClearProviders());
+
+        builder.ConfigureServices(services =>
+        {
+            services.RemoveAll<IEmailSender>();
+            services.AddSingleton<IEmailSender>(Email);
+        });
     }
 }
 

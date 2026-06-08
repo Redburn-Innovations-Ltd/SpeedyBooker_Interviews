@@ -17,6 +17,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite("DataSource=UniversityRooms;Mode=Memory;Cache=Shared"));
 
 builder.Services.AddScoped<IBookingService, BookingService>();
+builder.Services.AddScoped<IEmailSender, LoggingEmailSender>();
 
 builder.Services
     .AddControllers()

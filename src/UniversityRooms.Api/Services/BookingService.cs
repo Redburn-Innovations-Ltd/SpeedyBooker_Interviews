@@ -31,7 +31,7 @@ public interface IBookingService
 /// Holds the booking domain logic: validating the time range, checking the room
 /// is free, pricing the booking, and recording the initial payment.
 /// </summary>
-public class BookingService(AppDbContext db) : IBookingService
+public class BookingService(AppDbContext db, IEmailSender email) : IBookingService
 {
     public async Task<CreateBookingResult> CreateAsync(CreateBookingRequest request, CancellationToken ct = default)
     {
@@ -78,6 +78,14 @@ public class BookingService(AppDbContext db) : IBookingService
         };
 
         db.Bookings.Add(booking);
+
+        // Let the guest know their stay is confirmed.
+        var body =
+            $"Hi,\n\nYour stay at {booking.Room?.Name}, {booking.Room?.Vendor?.Name}, " +
+            $"from {booking.CheckInDate:d MMM yyyy} to {booking.CheckOutDate:d MMM yyyy} is confirmed.\n" +
+            $"Total: £{booking.TotalPrice}.\n\nThanks for booking with us.";
+        await email.SendAsync(booking.ContactEmail, "Your booking is confirmed", body, ct);
+
         await db.SaveChangesAsync(ct);
 
         // Re-load navigation properties for the response.
