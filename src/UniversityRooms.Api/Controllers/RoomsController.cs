@@ -68,6 +68,58 @@ public class RoomsController(AppDbContext db) : ControllerBase
         return Ok(available.OrderBy(r => r.Building).ThenBy(r => r.Name));
     }
 
+    /// <summary>
+    /// Search for available rooms for a stay, with optional capacity/price
+    /// filters, sorted cheapest first and returned a page at a time.
+    /// </summary>
+    [HttpGet("search")]
+    public async Task<ActionResult<PagedRooms>> Search(
+        [FromQuery] DateOnly startDate,
+        [FromQuery] int nights,
+        [FromQuery] int? minCapacity,
+        [FromQuery] decimal? maxNightlyRate,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
+    {
+        if (nights < 1)
+            return BadRequest("nights must be at least 1.");
+
+        var checkIn = startDate;
+        var checkOut = startDate.AddDays(nights);
+
+        var rooms = await db.Rooms.Include(r => r.Vendor).ToListAsync();
+
+        var available = new List<RoomResponse>();
+        foreach (var room in rooms)
+        {
+            if (minCapacity is not null && room.Capacity < minCapacity)
+                continue;
+            if (maxNightlyRate is not null && room.NightlyRate > maxNightlyRate)
+                continue;
+
+            var bookings = await db.Bookings
+                .Where(b => b.RoomId == room.Id)
+                .ToListAsync();
+
+            var alreadyBooked = bookings.Any(b =>
+                b.Status != BookingStatus.Cancelled &&
+                checkIn < b.CheckOutDate &&
+                checkOut > b.CheckInDate);
+
+            if (!alreadyBooked)
+                available.Add(RoomResponse.From(room));
+        }
+
+        // Return the requested page, cheapest first.
+        var items = available
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .OrderBy(r => r.NightlyRate)
+            .ToList();
+
+        return Ok(new PagedRooms(page, pageSize, items));
+    }
+
     /// <summary>Get a single room.</summary>
     [HttpGet("{id:int}")]
     public async Task<ActionResult<RoomResponse>> GetById(int id)
