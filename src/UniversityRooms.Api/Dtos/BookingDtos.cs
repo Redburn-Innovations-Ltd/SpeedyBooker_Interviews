@@ -23,6 +23,17 @@ public class CreateBookingRequest
     public PaymentMethod PaymentMethod { get; set; } = PaymentMethod.Card;
 }
 
+public class UpdateBookingRequest
+{
+    /// <summary>New first night of the stay.</summary>
+    [Required]
+    public DateOnly CheckInDate { get; set; }
+
+    /// <summary>New day the room is vacated.</summary>
+    [Required]
+    public DateOnly CheckOutDate { get; set; }
+}
+
 public class BookingResponse
 {
     public int Id { get; set; }

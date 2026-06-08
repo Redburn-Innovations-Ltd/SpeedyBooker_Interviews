@@ -66,6 +66,39 @@ public class BookingsController(AppDbContext db, IBookingService bookingService)
         return CreatedAtAction(nameof(GetById), new { id = dto.Id }, dto);
     }
 
+    /// <summary>
+    /// Change the dates of an existing booking. The room must be free for the
+    /// new dates.
+    /// </summary>
+    [HttpPut("{id:int}")]
+    public async Task<ActionResult<BookingResponse>> Update(int id, UpdateBookingRequest request)
+    {
+        var booking = await db.Bookings
+            .Include(b => b.Room)!.ThenInclude(r => r!.Vendor)
+            .FirstOrDefaultAsync(b => b.Id == id);
+
+        if (booking is null)
+            return NotFound();
+
+        if (request.CheckOutDate <= request.CheckInDate)
+            return BadRequest("CheckOutDate must be after CheckInDate.");
+
+        var clash = await db.Bookings.AnyAsync(b =>
+            b.RoomId == booking.RoomId &&
+            b.Status != BookingStatus.Cancelled &&
+            request.CheckInDate < b.CheckOutDate &&
+            request.CheckOutDate > b.CheckInDate);
+
+        if (clash)
+            return Conflict("The room is not available for those dates.");
+
+        booking.CheckInDate = request.CheckInDate;
+        booking.CheckOutDate = request.CheckOutDate;
+
+        await db.SaveChangesAsync();
+        return Ok(BookingResponse.From(booking));
+    }
+
     /// <summary>Cancel a booking.</summary>
     [HttpPost("{id:int}/cancel")]
     public async Task<IActionResult> Cancel(int id)
