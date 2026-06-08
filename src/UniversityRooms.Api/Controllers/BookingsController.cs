@@ -66,7 +66,10 @@ public class BookingsController(AppDbContext db, IBookingService bookingService)
         return CreatedAtAction(nameof(GetById), new { id = dto.Id }, dto);
     }
 
-    /// <summary>Cancel a booking.</summary>
+    /// <summary>
+    /// Cancel a booking. Depending on how far ahead of check-in the cancellation
+    /// is made, a refund is recorded against the booking (see <see cref="RefundPolicy"/>).
+    /// </summary>
     [HttpPost("{id:int}/cancel")]
     public async Task<IActionResult> Cancel(int id)
     {
@@ -74,9 +77,25 @@ public class BookingsController(AppDbContext db, IBookingService bookingService)
         if (booking is null)
             return NotFound();
 
-        booking.Status = BookingStatus.Cancelled;
-        await db.SaveChangesAsync();
+        var today = DateOnly.FromDateTime(DateTime.UtcNow.Date);
+        var daysUntilCheckIn = booking.CheckInDate.DayNumber - today.DayNumber;
+        var refund = RefundPolicy.RefundAmount(booking.TotalPrice, daysUntilCheckIn);
 
+        booking.Status = BookingStatus.Cancelled;
+
+        if (refund > 0)
+        {
+            db.Payments.Add(new Payment
+            {
+                BookingId = booking.Id,
+                Amount = -refund,
+                Status = PaymentStatus.Refunded,
+                Method = PaymentMethod.Card,
+                CreatedAtUtc = DateTime.UtcNow,
+            });
+        }
+
+        await db.SaveChangesAsync();
         return NoContent();
     }
 }
