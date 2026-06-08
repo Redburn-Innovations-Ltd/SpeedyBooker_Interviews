@@ -8,6 +8,7 @@ namespace UniversityRooms.Api.Tests;
 [Collection("api")]
 public class BookingsTests(ApiFixture fixture)
 {
+    private readonly ApiFixture _fixture = fixture;
     private readonly HttpClient _client = fixture.Client;
 
     private static CreateBookingRequest NewRequest(int roomId, string email, DateOnly checkIn, int nights,
@@ -136,5 +137,16 @@ public class BookingsTests(ApiFixture fixture)
     {
         var response = await _client.PostAsync("/api/bookings/99999/cancel", null);
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Create_sends_a_confirmation_email_to_the_booker()
+    {
+        var checkIn = new DateOnly(2027, 5, 1);
+        await _client.PostAsJsonAsync("/api/bookings",
+            NewRequest(3, "email-test@example.com", checkIn, nights: 1));
+
+        var sent = Assert.Single(_fixture.Email.Sent, m => m.To == "email-test@example.com");
+        Assert.Equal("Your booking is confirmed", sent.Subject);
     }
 }
