@@ -137,4 +137,34 @@ public class BookingsTests(ApiFixture fixture)
         var response = await _client.PostAsync("/api/bookings/99999/cancel", null);
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
+
+    [Fact]
+    public async Task Update_changes_the_dates()
+    {
+        var created = await (await _client.PostAsJsonAsync("/api/bookings",
+            NewRequest(7, "modify-test@example.com", new DateOnly(2027, 8, 1), nights: 1))).ReadAsync<BookingResponse>();
+
+        var update = await _client.PutAsJsonAsync($"/api/bookings/{created.Id}", new UpdateBookingRequest
+        {
+            CheckInDate = new DateOnly(2027, 9, 10),
+            CheckOutDate = new DateOnly(2027, 9, 12),
+        });
+        Assert.Equal(HttpStatusCode.OK, update.StatusCode);
+
+        var booking = await update.ReadAsync<BookingResponse>();
+        Assert.Equal(new DateOnly(2027, 9, 10), booking.CheckInDate);
+        Assert.Equal(new DateOnly(2027, 9, 12), booking.CheckOutDate);
+        Assert.Equal(2, booking.Nights);
+    }
+
+    [Fact]
+    public async Task Update_unknown_booking_returns_404()
+    {
+        var response = await _client.PutAsJsonAsync("/api/bookings/99999", new UpdateBookingRequest
+        {
+            CheckInDate = new DateOnly(2027, 9, 1),
+            CheckOutDate = new DateOnly(2027, 9, 2),
+        });
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
 }
