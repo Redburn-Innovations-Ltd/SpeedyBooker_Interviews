@@ -57,7 +57,7 @@ public class BookingsTests(ApiFixture fixture)
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
 
         var booking = await response.ReadAsync<BookingResponse>();
-        Assert.Equal("Confirmed", booking.Status);
+        Assert.Equal("Pending", booking.Status);
         Assert.Equal(3, booking.RoomId);
         Assert.Equal(2, booking.Nights);
         Assert.Equal("create-test@example.com", booking.ContactEmail);

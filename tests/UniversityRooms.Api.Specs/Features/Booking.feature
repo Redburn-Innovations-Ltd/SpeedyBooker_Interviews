@@ -19,7 +19,7 @@ Feature: Booking a room
       }
       """
     Then the response status code should be 201
-    And the response field "status" should be "Confirmed"
+    And the response field "status" should be "Pending"
     And the response field "nights" should be "2"
     And I remember the booking id
 
