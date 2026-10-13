@@ -35,17 +35,23 @@ public class PaymentsController(AppDbContext db) : ControllerBase
     }
 
     /// <summary>
-    /// Mark a pending payment as paid. Real integrations would reconcile against
-    /// a payment provider; here we simply flip the status.
+    /// Mark a pending payment as paid and confirm its booking. Real integrations
+    /// would reconcile against a payment provider; here we simply flip the status.
     /// </summary>
     [HttpPost("{id:int}/capture")]
     public async Task<ActionResult<PaymentResponse>> Capture(int id)
     {
-        var payment = await db.Payments.FindAsync(id);
+        var payment = await db.Payments
+            .Include(p => p.Booking)
+            .FirstOrDefaultAsync(p => p.Id == id);
         if (payment is null)
             return NotFound();
 
         payment.Status = PaymentStatus.Paid;
+
+        // Payment received, so the hold becomes a confirmed booking.
+        payment.Booking!.Status = BookingStatus.Confirmed;
+
         await db.SaveChangesAsync();
 
         return Ok(PaymentResponse.From(payment));

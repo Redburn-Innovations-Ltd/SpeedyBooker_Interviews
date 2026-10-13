@@ -30,6 +30,8 @@ public interface IBookingService
 /// <summary>
 /// Holds the booking domain logic: validating the time range, checking the room
 /// is free, pricing the booking, and recording the initial payment.
+/// New bookings start as <see cref="BookingStatus.Pending"/> and hold the room until
+/// their payment is captured (see <see cref="BookingHoldService"/>).
 /// </summary>
 public class BookingService(AppDbContext db) : IBookingService
 {
@@ -62,7 +64,7 @@ public class BookingService(AppDbContext db) : IBookingService
             ContactEmail = request.ContactEmail,
             CheckInDate = request.CheckInDate,
             CheckOutDate = request.CheckOutDate,
-            Status = BookingStatus.Confirmed,
+            Status = BookingStatus.Pending,
             TotalPrice = total,
             CreatedAtUtc = DateTime.UtcNow,
             Payments =
